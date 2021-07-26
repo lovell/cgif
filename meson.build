@@ -5,10 +5,16 @@ project(
   default_options : ['c_std=c99'],
 )
 
+gio = dependency(
+  'gio-2.0',
+  required : true,
+)
+
 lib = library(
   'cgif',
   'cgif.c',
   install : true,
+  dependencies: [gio],
 )
 
 install_headers('cgif.h')

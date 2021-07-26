@@ -3,6 +3,8 @@
 #include <time.h>
 #include <string.h>
 
+#include <gio/gio.h>
+
 #include "cgif.h"
 
 #define WIDTH  100
@@ -39,6 +41,9 @@ int main(void) {
   //
   // create new GIF
   initGIFConfig(&gConfig, aPalette, numColors, GIF_ATTR_IS_ANIMATED, WIDTH, HEIGHT);
+  GFile *file = g_file_new_for_path("all_optim.gif");
+  GOutputStream *outputStream = (GOutputStream*) g_file_replace(file, NULL, FALSE, G_FILE_CREATE_PRIVATE, NULL, NULL);
+  gConfig.outputStream = outputStream;
   pGIF = cgif_newgif(&gConfig);
   //
   // add frames to GIF
@@ -59,5 +64,8 @@ int main(void) {
   //
   // Free allocated space at the end of the session
   cgif_close(pGIF);
+  g_output_stream_close(outputStream, NULL, NULL);
+  g_object_unref(outputStream);
+  g_object_unref(file);
   return 0;
 }

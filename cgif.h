@@ -4,10 +4,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <gio/gio.h>
+
 // flags to set the GIF/frame-attributes
 #define GIF_ATTR_IS_ANIMATED          (1uL << 1)       // make an animated GIF (default is non-animated GIF)
 #define GIF_ATTR_NO_GLOBAL_TABLE      (1uL << 2)       // disable global color table (global color table is default)
 #define FRAME_ATTR_USE_LOCAL_TABLE    (1uL << 0)       // use a local color table for a frame (local color table is not used by default)
+#define FRAME_ATTR_HAS_TRANSPARENCY   (1uL << 1)       // palette contains transparency at index 0
 // flags to decrease GIF-size
 #define FRAME_GEN_USE_TRANSPARENCY    (1uL << 0)       // use transparency optimization (setting pixels identical to previous frame transparent)
 #define FRAME_GEN_USE_DIFF_WINDOW     (1uL << 1)       // do encoding just for the sub-window that has changed from previous frame
@@ -35,6 +38,7 @@ struct st_gifconfig {
   uint16_t    height;                                    // height of each frame in the GIF
   uint16_t    numGlobalPaletteEntries;                   // size of the global color table
   uint16_t    numLoops;                                  // number of repetitons of an animated GIF (set to INFINITE_LOOP for infinite loop)
+  GOutputStream* outputStream;
 };
 
 // FrameConfig type (parameters passed by user)

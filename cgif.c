@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <gio/gio.h>
+
 #include "cgif.h"
 
 #define HEADER_OFFSET_SIGNATURE    (0x00)
@@ -364,15 +366,14 @@ GIF* cgif_newgif(GIFConfig* pConfig) {
   pGIF->pCurFrame = &(pGIF->firstFrame);
   
   // write first sections to file
-  pGIF->pFile = fopen(pConfig->path, "wb"); // TBD check if fopen success
-  fwrite(pGIF->aHeader, 1, 13, pGIF->pFile);
+  g_output_stream_write(pGIF->config.outputStream, pGIF->aHeader, 13, NULL, NULL);
   if((pGIF->config.attrFlags & GIF_ATTR_NO_GLOBAL_TABLE) == 0) {
     initCodeLen = calcInitCodeLen(pGIF->config.numGlobalPaletteEntries);
     initDictLen = 1uL << (initCodeLen - 1);
-    fwrite(pGIF->aGlobalColorTable, 1, initDictLen * 3, pGIF->pFile);
+    g_output_stream_write(pGIF->config.outputStream, pGIF->aGlobalColorTable, initDictLen * 3, NULL, NULL);
   }
   if(pGIF->config.attrFlags & GIF_ATTR_IS_ANIMATED) {
-    fwrite(pGIF->aAppExt, 1, 19, pGIF->pFile);
+    g_output_stream_write(pGIF->config.outputStream, pGIF->aAppExt, 19, NULL, NULL);
   }
   return pGIF;
 }
@@ -555,7 +556,7 @@ int cgif_addframe(GIF* pGIF, FrameConfig* pConfig) {
     pFrame->aGraphicExt[1] = 0xF9;
     pFrame->aGraphicExt[2] = 0x04;
     pFrame->aGraphicExt[3] = 0x04;
-    if(pFrame->config.genFlags & FRAME_GEN_USE_TRANSPARENCY) {
+    if((pFrame->config.genFlags & FRAME_GEN_USE_TRANSPARENCY) || (pConfig->attrFlags & FRAME_ATTR_HAS_TRANSPARENCY)) {
       pFrame->aGraphicExt[3] |= 0x01;
     }
     pFrame->aGraphicExt[6] = pFrame->transIndex;
@@ -565,14 +566,14 @@ int cgif_addframe(GIF* pGIF, FrameConfig* pConfig) {
   // write frame to file
   initialCodeSize = pFrame->initCodeLen - 1;
   if(pGIF->config.attrFlags & GIF_ATTR_IS_ANIMATED) {
-    fwrite(pFrame->aGraphicExt, 1, 8, pGIF->pFile);
+    g_output_stream_write(pGIF->config.outputStream, pFrame->aGraphicExt, 8, NULL, NULL);
   }
-  fwrite(pFrame->aImageHeader, 1, 10, pGIF->pFile);
+  g_output_stream_write(pGIF->config.outputStream, pFrame->aImageHeader, 10, NULL, NULL);
   if(pFrame->config.attrFlags & FRAME_ATTR_USE_LOCAL_TABLE) {
-    fwrite(pFrame->aLocalColorTable, 1, pFrame->initDictLen * 3, pGIF->pFile);
+    g_output_stream_write(pGIF->config.outputStream, pFrame->aLocalColorTable, pFrame->initDictLen * 3, NULL, NULL);
   }
-  fwrite(&initialCodeSize, 1, 1, pGIF->pFile);
-  fwrite(pFrame->pRasterData, 1, pFrame->sizeRasterData, pGIF->pFile);  
+  g_output_stream_write(pGIF->config.outputStream, &initialCodeSize, 1, NULL, NULL);
+  g_output_stream_write(pGIF->config.outputStream, pFrame->pRasterData, pFrame->sizeRasterData, NULL, NULL);
 
   // free stuff
   free(pFrame->pRasterData);
@@ -586,8 +587,7 @@ int cgif_addframe(GIF* pGIF, FrameConfig* pConfig) {
 int cgif_close(GIF* pGIF) {
   // not first frame?
   // => free preserved image data of the frame before
-  fwrite(";", 1, 1, pGIF->pFile); // write term symbol to GIF-file 
-  fclose(pGIF->pFile);            // we are done at this point => close the file
+  g_output_stream_write(pGIF->config.outputStream, ";", 1, NULL, NULL);
   if(&(pGIF->firstFrame) != pGIF->pCurFrame) {
     free(pGIF->pCurFrame->pBef->config.pImageData);
     if(pGIF->pCurFrame->pBef != &(pGIF->firstFrame)) {

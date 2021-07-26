@@ -13,7 +13,10 @@ foreach t : tests
   test_exe = executable(
     'test_' + t,
     t + '.c',
-    dependencies : [libcgif_dep],
+    dependencies : [
+      libcgif_dep,
+      gio,
+    ],
     include_directories : ['..'],
   )
   test(t, test_exe)

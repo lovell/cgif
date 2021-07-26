@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <gio/gio.h>
+
 #include "cgif.h"
 
 #define WIDTH  100
@@ -31,6 +33,9 @@ int main(void) {
   gConfig.pGlobalPalette          = aPalette;
   gConfig.numGlobalPaletteEntries = numColors;
   gConfig.path                    = "animated_stripe_pattern.gif";
+  GFile *file = g_file_new_for_path("animated_stripe_pattern.gif");
+  GOutputStream *outputStream = (GOutputStream*) g_file_replace(file, NULL, FALSE, G_FILE_CREATE_PRIVATE, NULL, NULL);
+  gConfig.outputStream = outputStream;
   //
   // create new GIF
   pGIF = cgif_newgif(&gConfig);
@@ -50,5 +55,8 @@ int main(void) {
   //
   // write GIF to file
   cgif_close(pGIF);                  // free allocated space at the end of the session
+  g_output_stream_close(outputStream, NULL, NULL);
+  g_object_unref(outputStream);
+  g_object_unref(file);
   return 0;
 }
